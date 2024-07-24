@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+# Use this to compare 2 SVN commits for a specific file
+# and open the differences in VS Code.
+
+########
+# HELP #
+########
+
+myHelp() {
+# Unlike Python's "argparse," Bash's "getopts" doesn't auto-generate
+# the help or keep this "help" output up-to-date: you have to do that.
+echo "Displays the difference between two revisions for a specific file in SVN."
+echo -e "\033[1;33mThis opens it up in VS Code.\033[0m"
+
+if ! command -v code > /dev/null
+then
+    echo -e "\033[1;31mNOTE: Make sure you install Code command in PATH.\033[0m"
+fi
+
+cat << EOF
+
+Usage:
+    $(basename "${0}") [-h] <older revision> <newer revision> <relative/path/to/file.txt>
+
+Examples:
+    svndiff 12345 67890 some/relative/path/to/file.txt
+
+Args:
+-h  Show this help and exit
+EOF
+}
+
+###########
+# PROCESS #
+###########
+
+svnDiff() {
+    svn diff -r ${1}:${2} ${3} --diff-cmd code -x "--wait --diff"
+}
+
+if [ $# != 3 ]; then
+    myHelp
+    exit 1
+fi
+
+while getopts ":h" opt
+do
+    case ${opt} in
+        h)
+            myHelp
+            exit 0
+            ;;
+        \?)
+            echo -e "\033[1;31mInvalid option: -${OPTARG}\033[0m\n" >&2
+            myHelp
+            exit 1
+            ;;
+        :)
+            # 2017-08-03: no option currently requires an option, but this
+            # is how to handle it if that changes.
+            echo -e "\033[1;31mOption -${OPTARG} requires an argument.\033[0m\n" >&2
+            myHelp
+            exit 1
+            ;;
+    esac
+done
+
+svnDiff "${1}" "${2}" "${3}"
