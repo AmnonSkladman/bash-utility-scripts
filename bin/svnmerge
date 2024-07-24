@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+
+# This is used to merge changes from one SVN repo to another.
+
+########
+# HELP #
+########
+
+myHelp() {
+# Unlike Python's "argparse," Bash's "getopts" doesn't auto-generate
+# the help or keep this "help" output up-to-date: you have to do that.
+echo -e "\033[1;33mUse a single revision, or multiple revisions separated by commas only. Do not use spaces.\033[0m\n"
+
+cat << EOF
+  
+Usage:
+    $(basename "${0}") [-h] <revision(s)>
+
+Examples: 
+    svnmerge 12345
+    svnmerge 12345,12346,12347
+    svnmerge r12345
+    svnmerge r12345,r12346,r12347
+
+Args:
+-h  Show this help and exit
+EOF
+}
+
+###########
+# PROCESS #
+###########
+
+svnMerge() {
+    # Removes the 'r' from the commits
+    filtered_commits="$(echo "$1" | sed 's/r*\|"//g')"
+    # Merge the commits from another branch into the current one
+    svn merge -c "${filtered_commits}" "^/branches/some-branch"
+}
+
+if [ $# != 1 ]; then
+    myHelp
+    exit 1
+fi
+
+while getopts ":h" opt
+do
+    case ${opt} in
+        h)
+            myHelp
+            exit 0
+            ;;
+        \?)
+            echo -e "\033[1;31mInvalid option: -${OPTARG}\033[0m\n" >&2
+            myHelp
+            exit 1
+            ;;
+        :)
+            # 2017-08-03: no option currently requires an option, but this
+            # is how to handle it if that changes.
+            echo -e "\033[1;31mOption -${OPTARG} requires an argument.\033[0m\n" >&2
+            myHelp
+            exit 1
+            ;;
+    esac
+done
+
+shift $((OPTIND-1))
+commits="${*}"
+
+svnMerge "${commits}"
